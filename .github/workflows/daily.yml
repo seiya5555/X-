@@ -1,0 +1,59 @@
+name: X Daily Tweet Generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      followers:
+        description: "今日のフォロワー数（数字）"
+        required: true
+        type: number
+        default: 0
+      revenue:
+        description: "今日の収益額（円）"
+        required: true
+        type: number
+        default: 0
+      today_memo:
+        description: "今日の出来事・気づき（1〜2行）"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    name: 投稿文を生成してキューに保存
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      - name: 投稿文を生成
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FOLLOWERS: ${{ inputs.followers }}
+          REVENUE: ${{ inputs.revenue }}
+          TODAY_MEMO: ${{ inputs.today_memo }}
+          AUTO_CONFIRM: "true"
+        run: python main.py
+
+      - name: キューファイルをリポジトリにコミット
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add tweets_queue.json memory.json
+          git diff --staged --quiet || \
+            git commit -m "chore: generate tweet queue for $(TZ=Asia/Tokyo date +%Y-%m-%d)"
+          git push

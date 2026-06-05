@@ -1,0 +1,51 @@
+name: X Hourly Tweet Poster
+
+on:
+  schedule:
+    # 毎時 :05 に実行（JST換算: 毎時05分）
+    # generate workflow が :00 に動く想定のため :05 にオフセット
+    - cron: "5 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  post:
+    name: スケジュール投稿を実行
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: 最新のキューを取得
+        run: git pull --rebase origin ${{ github.ref_name }}
+
+      - name: Python 3.11 をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      - name: 予定された投稿を実行
+        env:
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+        run: python scheduler.py
+
+      - name: 更新されたキューをコミット
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add tweets_queue.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: posted tweet at $(TZ=Asia/Tokyo date '+%H:%M JST')"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push
+          fi
