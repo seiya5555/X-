@@ -36,36 +36,97 @@ Obsidian に溜めた自分の知識・実績を土台に、競合の伸びパ�
 
 ---
 
-## セットアップ
+## VS Code での始め方
 
-### 1. 依存パッケージのインストール
+初回だけ以下を順番に実行します。2回目以降は「4. 実行する」だけで動きます。
+
+### 0. リポジトリを手元に落とす
+
+VS Code のターミナル（`Ctrl + @` / Mac は `Cmd + @`）を開いて実行します。
+
+```bash
+git clone https://github.com/seiya5555/x-.git
+cd x-
+git checkout claude/cloud-code-usage-03lju6
+```
+
+すでに clone 済みなら、最新を取り込むだけで構いません。
+
+```bash
+git pull origin claude/cloud-code-usage-03lju6
+```
+
+### 1. 仮想環境を作る
+
+プロジェクト専用の Python 環境を作ります。パソコン全体を汚さずに済みます。
+
+```bash
+python -m venv .venv
+```
+
+**Mac / Linux**
+
+```bash
+source .venv/bin/activate
+```
+
+**Windows（PowerShell）**
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+ターミナルの行頭に `(.venv)` と出れば成功です。
+
+> VS Code 右下に「この仮想環境を選択しますか？」と出たら「はい」を押してください。
+> 出ない場合は `Ctrl + Shift + P` →「Python: Select Interpreter」→ `.venv` を選びます。
+
+### 2. パッケージを入れる
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. 環境変数の設定
-
-`.env.example` をコピーして `.env` を作成します。
+### 3. `.env` を作る
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` に以下の2つを設定します。
+VS Code のサイドバーから `.env` を開き、最低限この2つを埋めます。
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
-OBSIDIAN_VAULT_PATH=/Users/yourname/Documents/MyVault
+OBSIDIAN_VAULT_PATH=/Users/あなたの名前/Documents/Vault名
 ```
 
-`OBSIDIAN_VAULT_PATH` は Obsidian の Vault フォルダのパスです。
-Obsidian の「設定 → Vault → Vault のフォルダを開く」で確認できます。
+- **API キー** は https://console.anthropic.com の「API Keys」で発行します
+- **Vault のパス** は Obsidian で Vault を右クリック →「フォルダで表示」から辿れます
+  - Windows は区切りを `/` にしてください（例: `C:/Users/yourname/Documents/MyVault`）
 
-> Vault のパスが未設定でも動作しますが、過去ノートを参照できないため
-> 生成される台本の精度が大きく落ちます。設定を強く推奨します。
+`.env` は `.gitignore` に入っているので、GitHub には上がりません。
 
-### 3. 動作確認
+### 4. 実行する
+
+```bash
+python -m reels.main script
+```
+
+テーマを聞かれるので入力すれば、台本が生成されて Obsidian に保存されます。
+
+---
+
+## つまずいたときは
+
+| 症状 | 原因と対処 |
+|---|---|
+| `ModuleNotFoundError: No module named 'anthropic'` | 仮想環境が有効になっていません。`(.venv)` が行頭にあるか確認し、なければ有効化コマンドを再実行してください |
+| `ANTHROPIC_API_KEY が設定されていません` | `.env` が未作成か、キーが空です。`.env`（`.env.example` ではない）を確認してください |
+| `OBSIDIAN_VAULT_PATH のフォルダが見つかりません` | パスの打ち間違いです。Windows は区切りを `/` にしてください |
+| `python` が見つからない | `python3` に置き換えて実行してください（Mac に多いです） |
+| 実行はできるが「Vault が未設定」と警告が出る | Vault なしでも動きますが、過去ノートを参照できないため台本の精度が大きく落ちます。設定を強く推奨します |
+
+コマンド一覧は以下で確認できます。
 
 ```bash
 python -m reels.main --help

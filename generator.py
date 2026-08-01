@@ -151,8 +151,8 @@ def generate_tweets(
 
     try:
         message = client.messages.create(
-            model="claude-opus-4-8",
-            max_tokens=8192,
+            model="claude-opus-5",
+            max_tokens=16000,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_content}],
         )
@@ -171,7 +171,19 @@ def generate_tweets(
     except anthropic.APIError as e:
         raise RuntimeError(f"エラー: Claude APIで予期しないエラーが発生しました。詳細: {e}")
 
-    response_text = message.content[0].text.strip()
+    if message.stop_reason == "refusal":
+        raise RuntimeError(
+            "エラー: 入力内容が安全性のチェックにかかり、生成が中断されました。\n"
+            "入力する出来事・気づきの表現を変えてもう一度試してください。"
+        )
+
+    # 思考ブロックが先頭に来ることがあるため、テキストブロックだけを拾う。
+    response_text = "".join(
+        block.text for block in message.content if block.type == "text"
+    ).strip()
+
+    if not response_text:
+        raise RuntimeError("エラー: AIの応答が空でした。もう一度試してください。")
 
     json_match = re.search(r"\{[\s\S]*\}", response_text)
     if not json_match:

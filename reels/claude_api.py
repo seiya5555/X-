@@ -45,7 +45,21 @@ def ask_json(system_prompt: str, user_content: str) -> dict:
     except anthropic.APIError as e:
         raise RuntimeError(f"エラー: Claude APIで予期しないエラーが発生しました。詳細: {e}")
 
-    response_text = message.content[0].text.strip()
+    if message.stop_reason == "refusal":
+        raise RuntimeError(
+            "エラー: 入力内容が安全性のチェックにかかり、生成が中断されました。\n"
+            "テーマや追加指示の表現を変えてもう一度試してください。"
+        )
+
+    # 思考ブロックが先頭に来ることがあるため、テキストブロックだけを拾う。
+    response_text = "".join(
+        block.text for block in message.content if block.type == "text"
+    ).strip()
+
+    if not response_text:
+        raise RuntimeError(
+            "エラー: AIの応答が空でした。もう一度試してください。"
+        )
 
     json_match = re.search(r"\{[\s\S]*\}", response_text)
     if not json_match:

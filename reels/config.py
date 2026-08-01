@@ -13,8 +13,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MODEL = "claude-opus-4-8"
-MAX_TOKENS = 8192
+MODEL = "claude-opus-5"
+# 思考トークンと応答テキストの合計上限。台本1本ぶんの余裕を持たせる。
+MAX_TOKENS = 16000
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 DATA_DIR = PACKAGE_DIR / "data"
