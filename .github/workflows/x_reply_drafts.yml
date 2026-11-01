@@ -1,0 +1,46 @@
+name: X Reply Draft Assistant
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: '最大生成数（1〜20件）'
+        required: false
+        type: number
+        default: 20
+
+permissions:
+  contents: write
+
+concurrency:
+  group: x-reply-drafts
+  cancel-in-progress: false
+
+jobs:
+  generate-reply-drafts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate with Gemini (no X posting)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LIMIT: ${{ inputs.batch_size || '20' }}
+        run: python reply_assistant/generate.py --limit "$LIMIT"
+      - name: Commit drafts for human review
+        run: |
+          git add reply_assistant/results.json reply_assistant/drafts.md
+          if ! git diff --staged --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: update X reply drafts [skip ci]"
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          fi
